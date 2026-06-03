@@ -62,6 +62,7 @@ function Dashboard() {
     lastDigit: null,
     lastPrice: null,
     streak: 0,
+    streakDigit: null,
     ticks: [],
     trades: [],
     pnl: 0,
