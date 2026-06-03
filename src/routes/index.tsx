@@ -573,6 +573,34 @@ function Dashboard() {
         .btn-ghost:hover { color: var(--foreground); }
       `}</style>
       <Footer />
+
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="grid grid-cols-3">
+          {([
+            { id: "controls", label: "Controls", icon: Settings2 },
+            { id: "live", label: "Live", icon: Activity },
+            { id: "stats", label: "Stats", icon: BarChart3 },
+          ] as const).map(({ id, label, icon: Icon }) => {
+            const active = mobileTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => {
+                  setMobileTab(id);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${active ? "" : "opacity-70"}`} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
