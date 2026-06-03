@@ -32,6 +32,7 @@ export type BotState = {
   lastDigit: number | null;
   lastPrice: number | null;
   streak: number;
+  streakDigit: number | null;
   ticks: { price: number; digit: number; time: number }[];
   trades: Trade[];
   pnl: number;
