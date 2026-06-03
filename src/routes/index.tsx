@@ -202,29 +202,29 @@ function Dashboard() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground pb-16 lg:pb-0">
       {/* Top bar */}
-      <header className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="h-6 w-6 rounded-sm bg-primary/20 grid place-items-center">
+      <header className="flex items-center justify-between border-b border-border px-3 sm:px-6 py-3 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="h-6 w-6 shrink-0 rounded-sm bg-primary/20 grid place-items-center">
             <div className="h-2 w-2 rounded-sm bg-primary" />
           </div>
-          <h1 className="font-display text-base font-semibold tracking-tight">
-            ThDpstSmrtTrdr<span className="text-muted-foreground"> · Digits Differ</span>
+          <h1 className="font-display text-sm sm:text-base font-semibold tracking-tight truncate">
+            ThDpstSmrtTrdr<span className="hidden sm:inline text-muted-foreground"> · Digits Differ</span>
           </h1>
         </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 text-xs shrink-0">
+          <div className="flex items-center gap-1.5">
             <span className={`status-dot inline-block h-2 w-2 rounded-full ${statusColor}`} style={{ backgroundColor: "currentColor" }} />
-            <span className={statusColor}>{statusLabel}</span>
+            <span className={`${statusColor} hidden xs:inline`}>{statusLabel}</span>
           </div>
           <div className="text-muted-foreground font-mono">
-            {s?.currency} <span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
+            <span className="hidden sm:inline">{s?.currency} </span><span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
           </div>
-          <div className="hidden sm:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
+          <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
           <button
             onClick={() => signOut()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             title="Log out"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -235,7 +235,7 @@ function Dashboard() {
 
       <main className="grid gap-px bg-border grid-cols-1 lg:[grid-template-columns:minmax(280px,320px)_1fr_minmax(260px,300px)]">
         {/* LEFT: Controls */}
-        <section className="bg-background p-5 space-y-5">
+        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "controls" ? "" : "hidden"} lg:block`}>
           <SectionLabel>Connection</SectionLabel>
 
           {/* Account type toggle */}
