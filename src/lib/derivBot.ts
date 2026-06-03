@@ -191,11 +191,20 @@ export class DerivBot {
     const tick = { price, digit, time: Date.now() };
     const ticks = [tick, ...this.state.ticks].slice(0, 60);
 
-    let streak = this.state.streak;
-    if (digit === this.cfg.targetDigit) streak += 1;
-    else streak = 0;
+    let streak: number;
+    let streakDigit: number | null;
+    if (this.cfg.anyDigit) {
+      // Track consecutive repeats of whichever digit
+      if (this.state.streakDigit === digit) streak = this.state.streak + 1;
+      else streak = 1;
+      streakDigit = digit;
+    } else {
+      if (digit === this.cfg.targetDigit) streak = this.state.streak + 1;
+      else streak = 0;
+      streakDigit = this.cfg.targetDigit;
+    }
 
-    this.patch({ lastDigit: digit, lastPrice: price, ticks, streak });
+    this.patch({ lastDigit: digit, lastPrice: price, ticks, streak, streakDigit });
 
     if (this.cooldown > 0) this.cooldown -= 1;
 
@@ -205,9 +214,10 @@ export class DerivBot {
       this.cooldown === 0 &&
       streak >= this.cfg.repetitionCount
     ) {
-      this.placeTrade();
+      this.placeTrade(this.cfg.anyDigit ? digit : this.cfg.targetDigit);
     }
   }
+
 
   private async placeTrade() {
     this.patch({ pendingTrade: true, streak: 0 });
