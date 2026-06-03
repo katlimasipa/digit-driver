@@ -104,6 +104,12 @@ export function SessionHistory({ userId, refreshKey }: { userId: string; refresh
                         {r.account_type}
                       </span>
                     </td>
+                    <td className="py-2 pr-3 text-muted-foreground">
+                      {r.repetition_count ?? "—"}
+                      {r.target_digit != null && (
+                        <span className="text-muted-foreground/60"> · d{r.target_digit}</span>
+                      )}
+                    </td>
                     <td className="py-2 pr-3">{r.total_trades}</td>
                     <td className="py-2 pr-3">
                       <span className="text-bull">{r.wins}</span>
