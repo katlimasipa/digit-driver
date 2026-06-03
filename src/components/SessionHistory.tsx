@@ -82,6 +82,7 @@ export function SessionHistory({ userId, refreshKey }: { userId: string; refresh
               <tr className="text-left">
                 <th className="py-2 pr-3 font-medium">Ended</th>
                 <th className="py-2 pr-3 font-medium">Acct</th>
+                <th className="py-2 pr-3 font-medium">Reps</th>
                 <th className="py-2 pr-3 font-medium">Trades</th>
                 <th className="py-2 pr-3 font-medium">W/L</th>
                 <th className="py-2 pr-3 font-medium">Win%</th>
