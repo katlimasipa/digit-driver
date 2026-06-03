@@ -10,6 +10,7 @@ export type BotConfig = {
   repetitionCount: number;
   stopLoss: number; // positive USD
   takeProfit: number; // positive USD
+  anyDigit: boolean; // trade on whichever digit repeats N times
 };
 
 export type Trade = {
@@ -31,6 +32,7 @@ export type BotState = {
   lastDigit: number | null;
   lastPrice: number | null;
   streak: number;
+  streakDigit: number | null;
   ticks: { price: number; digit: number; time: number }[];
   trades: Trade[];
   pnl: number;
@@ -58,6 +60,7 @@ export class DerivBot {
     lastDigit: null,
     lastPrice: null,
     streak: 0,
+    streakDigit: null,
     ticks: [],
     trades: [],
     pnl: 0,
@@ -188,11 +191,20 @@ export class DerivBot {
     const tick = { price, digit, time: Date.now() };
     const ticks = [tick, ...this.state.ticks].slice(0, 60);
 
-    let streak = this.state.streak;
-    if (digit === this.cfg.targetDigit) streak += 1;
-    else streak = 0;
+    let streak: number;
+    let streakDigit: number | null;
+    if (this.cfg.anyDigit) {
+      // Track consecutive repeats of whichever digit
+      if (this.state.streakDigit === digit) streak = this.state.streak + 1;
+      else streak = 1;
+      streakDigit = digit;
+    } else {
+      if (digit === this.cfg.targetDigit) streak = this.state.streak + 1;
+      else streak = 0;
+      streakDigit = this.cfg.targetDigit;
+    }
 
-    this.patch({ lastDigit: digit, lastPrice: price, ticks, streak });
+    this.patch({ lastDigit: digit, lastPrice: price, ticks, streak, streakDigit });
 
     if (this.cooldown > 0) this.cooldown -= 1;
 
@@ -202,11 +214,12 @@ export class DerivBot {
       this.cooldown === 0 &&
       streak >= this.cfg.repetitionCount
     ) {
-      this.placeTrade();
+      this.placeTrade(this.cfg.anyDigit ? digit : this.cfg.targetDigit);
     }
   }
 
-  private async placeTrade() {
+
+  private async placeTrade(barrierDigit: number) {
     this.patch({ pendingTrade: true, streak: 0 });
     this.cooldown = 2;
     try {
@@ -219,7 +232,7 @@ export class DerivBot {
         duration: 1,
         duration_unit: "t",
         symbol: SYMBOL,
-        barrier: String(this.cfg.targetDigit),
+        barrier: String(barrierDigit),
       });
       if (proposal.error) throw new Error(proposal.error.message);
 
@@ -230,7 +243,7 @@ export class DerivBot {
       const trade: Trade = {
         id: String(contractId),
         time: Date.now(),
-        digit: this.cfg.targetDigit,
+        digit: barrierDigit,
         buyPrice: buy.buy.buy_price,
         status: "open",
       };

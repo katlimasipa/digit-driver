@@ -82,6 +82,7 @@ export function SessionHistory({ userId, refreshKey }: { userId: string; refresh
               <tr className="text-left">
                 <th className="py-2 pr-3 font-medium">Ended</th>
                 <th className="py-2 pr-3 font-medium">Acct</th>
+                <th className="py-2 pr-3 font-medium">Reps</th>
                 <th className="py-2 pr-3 font-medium">Trades</th>
                 <th className="py-2 pr-3 font-medium">W/L</th>
                 <th className="py-2 pr-3 font-medium">Win%</th>
@@ -102,6 +103,12 @@ export function SessionHistory({ userId, refreshKey }: { userId: string; refresh
                       <span className={r.account_type === "real" ? "text-bear" : "text-primary"}>
                         {r.account_type}
                       </span>
+                    </td>
+                    <td className="py-2 pr-3 text-muted-foreground">
+                      {r.repetition_count ?? "—"}
+                      {r.target_digit != null && (
+                        <span className="text-muted-foreground/60"> · d{r.target_digit}</span>
+                      )}
                     </td>
                     <td className="py-2 pr-3">{r.total_trades}</td>
                     <td className="py-2 pr-3">

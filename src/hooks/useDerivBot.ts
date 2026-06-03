@@ -10,6 +10,7 @@ const DEFAULT_CFG: BotConfig = {
   repetitionCount: 3,
   stopLoss: 10,
   takeProfit: 10,
+  anyDigit: false,
 };
 
 export function useDerivBot() {

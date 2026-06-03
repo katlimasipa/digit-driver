@@ -62,6 +62,7 @@ function Dashboard() {
     lastDigit: null,
     lastPrice: null,
     streak: 0,
+    streakDigit: null,
     ticks: [],
     trades: [],
     pnl: 0,
@@ -323,11 +324,24 @@ function Dashboard() {
 
           <Divider />
           <SectionLabel>Strategy</SectionLabel>
+          <label className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
+            <span className="text-[11px] text-muted-foreground">
+              Any digit mode
+              <span className="block text-[10px] text-muted-foreground/70">Trigger on whichever digit repeats</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={cfg.anyDigit}
+              onChange={(e) => setCfg({ ...cfg, anyDigit: e.target.checked })}
+              className="h-4 w-4 accent-primary"
+            />
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Target Digit">
               <select
-                className="input"
+                className="input disabled:opacity-40"
                 value={cfg.targetDigit}
+                disabled={cfg.anyDigit}
                 onChange={(e) => setCfg({ ...cfg, targetDigit: Number(e.target.value) })}
               >
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -345,6 +359,7 @@ function Dashboard() {
               <input className="input" value={cfg.appId} onChange={(e) => setCfg({ ...cfg, appId: e.target.value })} />
             </Field>
           </div>
+
 
           <Divider />
           <SectionLabel>Risk</SectionLabel>
@@ -397,11 +412,14 @@ function Dashboard() {
                 <div className="text-right space-y-1">
                   <div className="text-xs uppercase tracking-wider text-muted-foreground">Price</div>
                   <div className="font-mono text-xl">{s?.lastPrice?.toFixed(2) ?? "—"}</div>
-                  <div className="mt-3 text-xs uppercase tracking-wider text-muted-foreground">Streak</div>
+                  <div className="mt-3 text-xs uppercase tracking-wider text-muted-foreground">
+                    {cfg.anyDigit ? `Reps (digit ${s?.streakDigit ?? "—"})` : "Streak"}
+                  </div>
                   <div className="font-mono text-xl">
                     <span className={s && s.streak > 0 ? "text-warn" : ""}>{s?.streak ?? 0}</span>
                     <span className="text-muted-foreground"> / {cfg.repetitionCount}</span>
                   </div>
+
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-1.5">
@@ -511,9 +529,12 @@ function Dashboard() {
           <SectionLabel>Bot</SectionLabel>
           <Row k="Status" v={statusLabel} />
           <Row k="Pending" v={s?.pendingTrade ? "yes" : "no"} />
-          <Row k="Streak" v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`} />
+          <Row k="Mode" v={cfg.anyDigit ? "Any digit" : `Digit ${cfg.targetDigit}`} />
+          <Row k="Repetitions required" v={String(cfg.repetitionCount)} />
+          <Row k={cfg.anyDigit ? `Reps waited (digit ${s?.streakDigit ?? "—"})` : "Streak"} v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`} />
           <Row k="Symbol" v="R_100" />
           <Row k="Duration" v="1 tick" />
+
 
           <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
             Tokens stay in your browser only — never sent to any third-party server. Demo and Real tokens are stored separately on your account.
