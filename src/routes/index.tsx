@@ -529,9 +529,12 @@ function Dashboard() {
           <SectionLabel>Bot</SectionLabel>
           <Row k="Status" v={statusLabel} />
           <Row k="Pending" v={s?.pendingTrade ? "yes" : "no"} />
-          <Row k="Streak" v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`} />
+          <Row k="Mode" v={cfg.anyDigit ? "Any digit" : `Digit ${cfg.targetDigit}`} />
+          <Row k="Repetitions required" v={String(cfg.repetitionCount)} />
+          <Row k={cfg.anyDigit ? `Reps waited (digit ${s?.streakDigit ?? "—"})` : "Streak"} v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`} />
           <Row k="Symbol" v="R_100" />
           <Row k="Duration" v="1 tick" />
+
 
           <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
             Tokens stay in your browser only — never sent to any third-party server. Demo and Real tokens are stored separately on your account.
