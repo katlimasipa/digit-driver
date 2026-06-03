@@ -6,7 +6,7 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { Footer } from "@/components/Footer";
 import { SessionHistory } from "@/components/SessionHistory";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Save, Archive } from "lucide-react";
+import { LogOut, Save, Archive, Settings2, Activity, BarChart3 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
