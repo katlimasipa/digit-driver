@@ -10,6 +10,7 @@ export type BotConfig = {
   repetitionCount: number;
   stopLoss: number; // positive USD
   takeProfit: number; // positive USD
+  anyDigit: boolean; // trade on whichever digit repeats N times
 };
 
 export type Trade = {
