@@ -411,11 +411,14 @@ function Dashboard() {
                 <div className="text-right space-y-1">
                   <div className="text-xs uppercase tracking-wider text-muted-foreground">Price</div>
                   <div className="font-mono text-xl">{s?.lastPrice?.toFixed(2) ?? "—"}</div>
-                  <div className="mt-3 text-xs uppercase tracking-wider text-muted-foreground">Streak</div>
+                  <div className="mt-3 text-xs uppercase tracking-wider text-muted-foreground">
+                    {cfg.anyDigit ? `Reps (digit ${s?.streakDigit ?? "—"})` : "Streak"}
+                  </div>
                   <div className="font-mono text-xl">
                     <span className={s && s.streak > 0 ? "text-warn" : ""}>{s?.streak ?? 0}</span>
                     <span className="text-muted-foreground"> / {cfg.repetitionCount}</span>
                   </div>
+
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-1.5">
