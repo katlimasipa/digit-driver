@@ -83,6 +83,7 @@ function Dashboard() {
   const [sessionStart, setSessionStart] = useState<number>(() => Date.now());
   const [historyKey, setHistoryKey] = useState(0);
   const [savingSession, setSavingSession] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"controls" | "live" | "stats">("live");
 
   async function endAndSaveSession() {
     if (!user) return;
