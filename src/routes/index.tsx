@@ -323,11 +323,24 @@ function Dashboard() {
 
           <Divider />
           <SectionLabel>Strategy</SectionLabel>
+          <label className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
+            <span className="text-[11px] text-muted-foreground">
+              Any digit mode
+              <span className="block text-[10px] text-muted-foreground/70">Trigger on whichever digit repeats</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={cfg.anyDigit}
+              onChange={(e) => setCfg({ ...cfg, anyDigit: e.target.checked })}
+              className="h-4 w-4 accent-primary"
+            />
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Target Digit">
               <select
-                className="input"
+                className="input disabled:opacity-40"
                 value={cfg.targetDigit}
+                disabled={cfg.anyDigit}
                 onChange={(e) => setCfg({ ...cfg, targetDigit: Number(e.target.value) })}
               >
                 {Array.from({ length: 10 }).map((_, i) => (
@@ -345,6 +358,7 @@ function Dashboard() {
               <input className="input" value={cfg.appId} onChange={(e) => setCfg({ ...cfg, appId: e.target.value })} />
             </Field>
           </div>
+
 
           <Divider />
           <SectionLabel>Risk</SectionLabel>
