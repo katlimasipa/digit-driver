@@ -6,7 +6,7 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { Footer } from "@/components/Footer";
 import { SessionHistory } from "@/components/SessionHistory";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Save, Archive } from "lucide-react";
+import { LogOut, Save, Archive, Settings2, Activity, BarChart3 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -83,6 +83,7 @@ function Dashboard() {
   const [sessionStart, setSessionStart] = useState<number>(() => Date.now());
   const [historyKey, setHistoryKey] = useState(0);
   const [savingSession, setSavingSession] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"controls" | "live" | "stats">("live");
 
   async function endAndSaveSession() {
     if (!user) return;
@@ -201,29 +202,29 @@ function Dashboard() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground pb-16 lg:pb-0">
       {/* Top bar */}
-      <header className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="h-6 w-6 rounded-sm bg-primary/20 grid place-items-center">
+      <header className="flex items-center justify-between border-b border-border px-3 sm:px-6 py-3 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="h-6 w-6 shrink-0 rounded-sm bg-primary/20 grid place-items-center">
             <div className="h-2 w-2 rounded-sm bg-primary" />
           </div>
-          <h1 className="font-display text-base font-semibold tracking-tight">
-            ThDpstSmrtTrdr<span className="text-muted-foreground"> · Digits Differ</span>
+          <h1 className="font-display text-sm sm:text-base font-semibold tracking-tight truncate">
+            ThDpstSmrtTrdr<span className="hidden sm:inline text-muted-foreground"> · Digits Differ</span>
           </h1>
         </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 text-xs shrink-0">
+          <div className="flex items-center gap-1.5">
             <span className={`status-dot inline-block h-2 w-2 rounded-full ${statusColor}`} style={{ backgroundColor: "currentColor" }} />
-            <span className={statusColor}>{statusLabel}</span>
+            <span className={`${statusColor} hidden xs:inline`}>{statusLabel}</span>
           </div>
           <div className="text-muted-foreground font-mono">
-            {s?.currency} <span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
+            <span className="hidden sm:inline">{s?.currency} </span><span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
           </div>
-          <div className="hidden sm:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
+          <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
           <button
             onClick={() => signOut()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             title="Log out"
           >
             <LogOut className="h-3.5 w-3.5" />
@@ -234,7 +235,7 @@ function Dashboard() {
 
       <main className="grid gap-px bg-border grid-cols-1 lg:[grid-template-columns:minmax(280px,320px)_1fr_minmax(260px,300px)]">
         {/* LEFT: Controls */}
-        <section className="bg-background p-5 space-y-5">
+        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "controls" ? "" : "hidden"} lg:block`}>
           <SectionLabel>Connection</SectionLabel>
 
           {/* Account type toggle */}
@@ -397,7 +398,7 @@ function Dashboard() {
         </section>
 
         {/* CENTER: Live tick + digit */}
-        <section className="bg-background p-6 space-y-6">
+        <section className={`bg-background p-4 sm:p-6 space-y-6 ${mobileTab === "live" ? "" : "hidden"} lg:block`}>
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             <Panel title="Last Digit" hint={`${cfg.symbol === "R_100" ? "Volatility 100 Index" : cfg.symbol}`}>
               <div className="flex items-end justify-between gap-6">
@@ -505,7 +506,7 @@ function Dashboard() {
         </section>
 
         {/* RIGHT: Stats */}
-        <section className="bg-background p-5 space-y-5">
+        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "stats" ? "" : "hidden"} lg:block`}>
           <SectionLabel>Session</SectionLabel>
           <div className="space-y-1">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Net P/L</div>
@@ -572,6 +573,34 @@ function Dashboard() {
         .btn-ghost:hover { color: var(--foreground); }
       `}</style>
       <Footer />
+
+      {/* Mobile bottom nav */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="grid grid-cols-3">
+          {([
+            { id: "controls", label: "Controls", icon: Settings2 },
+            { id: "live", label: "Live", icon: Activity },
+            { id: "stats", label: "Stats", icon: BarChart3 },
+          ] as const).map(({ id, label, icon: Icon }) => {
+            const active = mobileTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => {
+                  setMobileTab(id);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${active ? "" : "opacity-70"}`} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
