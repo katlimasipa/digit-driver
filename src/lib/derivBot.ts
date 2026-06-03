@@ -219,7 +219,7 @@ export class DerivBot {
   }
 
 
-  private async placeTrade() {
+  private async placeTrade(barrierDigit: number) {
     this.patch({ pendingTrade: true, streak: 0 });
     this.cooldown = 2;
     try {
@@ -232,7 +232,7 @@ export class DerivBot {
         duration: 1,
         duration_unit: "t",
         symbol: SYMBOL,
-        barrier: String(this.cfg.targetDigit),
+        barrier: String(barrierDigit),
       });
       if (proposal.error) throw new Error(proposal.error.message);
 
@@ -243,7 +243,7 @@ export class DerivBot {
       const trade: Trade = {
         id: String(contractId),
         time: Date.now(),
-        digit: this.cfg.targetDigit,
+        digit: barrierDigit,
         buyPrice: buy.buy.buy_price,
         status: "open",
       };
