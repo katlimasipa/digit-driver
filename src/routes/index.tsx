@@ -398,7 +398,7 @@ function Dashboard() {
         </section>
 
         {/* CENTER: Live tick + digit */}
-        <section className="bg-background p-6 space-y-6">
+        <section className={`bg-background p-4 sm:p-6 space-y-6 ${mobileTab === "live" ? "" : "hidden"} lg:block`}>
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
             <Panel title="Last Digit" hint={`${cfg.symbol === "R_100" ? "Volatility 100 Index" : cfg.symbol}`}>
               <div className="flex items-end justify-between gap-6">
