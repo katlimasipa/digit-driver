@@ -506,7 +506,7 @@ function Dashboard() {
         </section>
 
         {/* RIGHT: Stats */}
-        <section className="bg-background p-5 space-y-5">
+        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "stats" ? "" : "hidden"} lg:block`}>
           <SectionLabel>Session</SectionLabel>
           <div className="space-y-1">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Net P/L</div>
