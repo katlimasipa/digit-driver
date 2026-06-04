@@ -251,14 +251,33 @@ export class DerivBot {
 
       // Subscribe to contract updates
       this.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 }).catch(() => {});
+
+      // Fallback poll: some accounts (notably real) don't reliably stream the
+      // final sold update. Poll every 1.5s up to ~30s until settled.
+      const startedAt = Date.now();
+      const poll = async () => {
+        const still = this.state.trades.find((t) => t.id === String(contractId));
+        if (!still || still.status !== "open") return;
+        if (Date.now() - startedAt > 30000) return;
+        try {
+          const r = await this.send({ proposal_open_contract: 1, contract_id: contractId });
+          if (r?.proposal_open_contract) this.handleContractUpdate(r.proposal_open_contract);
+        } catch {}
+        setTimeout(poll, 1500);
+      };
+      setTimeout(poll, 2500);
     } catch (e: any) {
       this.patch({ error: e?.message || "Trade failed", pendingTrade: false });
     }
   }
 
   private handleContractUpdate(c: any) {
-    if (!c.is_sold) return;
-    const profit = Number(c.profit);
+    const settled = c.is_sold || c.is_expired || c.status === "won" || c.status === "lost";
+    if (!settled) return;
+    // Ignore if we already processed this contract
+    const existing = this.state.trades.find((t) => t.id === String(c.contract_id));
+    if (!existing || existing.status !== "open") return;
+    const profit = Number(c.profit ?? (Number(c.sell_price ?? 0) - Number(c.buy_price ?? 0)));
     const status: Trade["status"] = profit >= 0 ? "won" : "lost";
     const trades = this.state.trades.map((t) =>
       t.id === String(c.contract_id) ? { ...t, status, profit, payout: c.payout } : t
