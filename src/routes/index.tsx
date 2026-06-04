@@ -617,14 +617,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 function NumInput({ value, onChange, min, step }: { value: number; onChange: (v: number) => void; min?: number; step?: number }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const display = draft !== null ? draft : String(value);
   return (
     <input
       type="number"
       className="input"
-      value={value}
+      value={display}
       min={min}
       step={step}
-      onChange={(e) => onChange(Number(e.target.value))}
+      onFocus={() => setDraft("")}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft === "" || draft === null) {
+          setDraft(null);
+          return;
+        }
+        const n = Number(draft);
+        if (!isNaN(n)) onChange(n);
+        setDraft(null);
+      }}
     />
   );
 }
