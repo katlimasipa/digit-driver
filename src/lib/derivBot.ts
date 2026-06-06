@@ -306,13 +306,18 @@ export class DerivBot {
 
     this.patch({ trades, pnl, wins, losses, totalTrades, pendingTrade: false });
 
+    const settledTrade = trades.find((t) => t.id === String(c.contract_id))!;
+    this.fire({ type: "trade_settled", trade: settledTrade, pnl });
+
     // Risk management
     if (pnl <= -Math.abs(this.cfg.stopLoss)) {
       this.stop();
       this.patch({ error: `Stop Loss hit (${pnl.toFixed(2)})` });
+      this.fire({ type: "stop_loss", pnl });
     } else if (pnl >= Math.abs(this.cfg.takeProfit)) {
       this.stop();
       this.patch({ error: `Take Profit reached (${pnl.toFixed(2)})` });
+      this.fire({ type: "take_profit", pnl });
     }
   }
 
