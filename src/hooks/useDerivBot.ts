@@ -42,5 +42,6 @@ export function useDerivBot() {
     stop: () => botRef.current?.stop(),
     reset: () => botRef.current?.resetSession(),
     disconnect: () => botRef.current?.disconnect(),
+    onEvent: (fn: (e: import("@/lib/derivBot").BotEvent) => void) => botRef.current?.onEvent(fn),
   };
 }
