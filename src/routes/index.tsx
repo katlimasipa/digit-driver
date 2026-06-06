@@ -310,6 +310,21 @@ function Dashboard() {
             <span className="hidden sm:inline">{s?.currency} </span><span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
           </div>
           <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
+          {notificationsSupported() && (
+            <button
+              onClick={pushOn ? disablePush : enablePush}
+              disabled={pushBusy || !swReg}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors ${
+                pushOn
+                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              title={pushOn ? "Notifications on — tap to disable" : "Enable push notifications"}
+            >
+              {pushOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">{pushOn ? "Notify" : "Notify off"}</span>
+            </button>
+          )}
           <button
             onClick={() => signOut()}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
