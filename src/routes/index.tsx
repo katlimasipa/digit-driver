@@ -290,7 +290,7 @@ function Dashboard() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-16 lg:pb-0">
+    <div className="min-h-[100dvh] bg-background text-foreground pb-[calc(env(safe-area-inset-bottom,0px)+4rem)] lg:pb-0 px-safe">
       {/* Top bar */}
       <header className="flex items-center justify-between border-b border-border px-3 sm:px-6 py-3 gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -678,7 +678,7 @@ function Dashboard() {
       <Footer />
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-safe">
         <div className="grid grid-cols-3">
           {([
             { id: "controls", label: "Controls", icon: Settings2 },
