@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useDerivBot } from "@/hooks/useDerivBot";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthScreen } from "@/components/AuthScreen";
 import { Footer } from "@/components/Footer";
 import { SessionHistory } from "@/components/SessionHistory";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Save, Archive, Settings2, Activity, BarChart3 } from "lucide-react";
+import { LogOut, Save, Archive, Settings2, Activity, BarChart3, Bell, BellOff } from "lucide-react";
+import { registerServiceWorker, subscribePush, unsubscribePush, notificationsSupported } from "@/lib/pwa";
+import { saveSubscription, removeSubscription, sendNotification } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,7 +55,7 @@ function useAnimatedNumber(value: number, duration = 400) {
 
 function Dashboard() {
   const { user, loading, signOut } = useAuth();
-  const { state, cfg, setCfg, start, stop, reset, connect, disconnect } = useDerivBot();
+  const { state, cfg, setCfg, start, stop, reset, connect, disconnect, onEvent } = useDerivBot();
   const s = state ?? {
     connected: false,
     running: false,
@@ -84,6 +87,91 @@ function Dashboard() {
   const [historyKey, setHistoryKey] = useState(0);
   const [savingSession, setSavingSession] = useState(false);
   const [mobileTab, setMobileTab] = useState<"controls" | "live" | "stats">("live");
+  const [swReg, setSwReg] = useState<ServiceWorkerRegistration | null>(null);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const callSave = useServerFn(saveSubscription);
+  const callRemove = useServerFn(removeSubscription);
+  const callNotify = useServerFn(sendNotification);
+
+  // Register service worker on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const reg = await registerServiceWorker();
+      if (!mounted) return;
+      setSwReg(reg);
+      if (reg && "PushManager" in window) {
+        const sub = await reg.pushManager.getSubscription();
+        setPushOn(!!sub && Notification.permission === "granted");
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Wire bot events to push notifications (sent server-side so all the user's devices receive them)
+  useEffect(() => {
+    if (!user) return;
+    const off = onEvent?.((e) => {
+      if (e.type === "trade_settled") {
+        const won = e.trade.status === "won";
+        const profit = e.trade.profit ?? 0;
+        callNotify({
+          data: {
+            title: won ? "Trade WON" : "Trade LOST",
+            body: `${won ? "+" : ""}${profit.toFixed(2)} ${s?.currency || "USD"} · Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} (digit ≠ ${e.trade.digit})`,
+            tag: "trade",
+          },
+        }).catch(() => {});
+      } else if (e.type === "take_profit") {
+        callNotify({ data: { title: "Take Profit reached", body: `Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} — bot stopped.`, tag: "tp" } }).catch(() => {});
+      } else if (e.type === "stop_loss") {
+        callNotify({ data: { title: "Stop Loss hit", body: `Net ${e.pnl.toFixed(2)} — bot stopped.`, tag: "sl" } }).catch(() => {});
+      }
+    });
+    return () => { off?.(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, onEvent]);
+
+  async function enablePush() {
+    if (!swReg || !user) return;
+    setPushBusy(true);
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { setPushBusy(false); return; }
+      const sub = await subscribePush(swReg);
+      if (!sub) { setPushBusy(false); return; }
+      const json = sub.toJSON();
+      await callSave({
+        data: {
+          endpoint: sub.endpoint,
+          p256dh: json.keys?.p256dh || "",
+          auth: json.keys?.auth || "",
+          userAgent: navigator.userAgent.slice(0, 500),
+        },
+      });
+      setPushOn(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPushBusy(false);
+    }
+  }
+
+  async function disablePush() {
+    if (!swReg) return;
+    setPushBusy(true);
+    try {
+      const sub = await swReg.pushManager.getSubscription();
+      if (sub) {
+        await callRemove({ data: { endpoint: sub.endpoint } }).catch(() => {});
+        await unsubscribePush(swReg);
+      }
+      setPushOn(false);
+    } finally {
+      setPushBusy(false);
+    }
+  }
 
   async function endAndSaveSession() {
     if (!user) return;
