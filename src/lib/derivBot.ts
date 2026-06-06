@@ -92,6 +92,14 @@ export class DerivBot {
     return () => this.listeners.delete(fn);
   }
 
+  onEvent(fn: EventListener) {
+    this.eventListeners.add(fn);
+    return () => this.eventListeners.delete(fn);
+  }
+
+  private fire(e: BotEvent) {
+    this.eventListeners.forEach((l) => { try { l(e); } catch {} });
+
   private emit() {
     const snap = { ...this.state, ticks: this.state.ticks.slice(), trades: this.state.trades.slice() };
     this.listeners.forEach((l) => l(snap));
