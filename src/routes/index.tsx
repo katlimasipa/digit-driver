@@ -8,14 +8,23 @@ import { Footer } from "@/components/Footer";
 import { SessionHistory } from "@/components/SessionHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut, Save, Archive, Settings2, Activity, BarChart3, Bell, BellOff } from "lucide-react";
-import { registerServiceWorker, subscribePush, unsubscribePush, notificationsSupported } from "@/lib/pwa";
+import { PwaInstallBanner, PwaInstallButton } from "@/components/PwaInstall";
+import {
+  registerServiceWorker,
+  subscribePush,
+  unsubscribePush,
+  notificationsSupported,
+} from "@/lib/pwa";
 import { saveSubscription, removeSubscription, sendNotification } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "ThDpstSmrtTrdr — Digits Differ Bot" },
-      { name: "description", content: "Automated Digits Differ trading on Volatility 100 via Deriv API." },
+      {
+        name: "description",
+        content: "Automated Digits Differ trading on Volatility 100 via Deriv API.",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -106,7 +115,9 @@ function Dashboard() {
         setPushOn(!!sub && Notification.permission === "granted");
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Wire bot events to push notifications (sent server-side so all the user's devices receive them)
@@ -124,12 +135,26 @@ function Dashboard() {
           },
         }).catch(() => {});
       } else if (e.type === "take_profit") {
-        callNotify({ data: { title: "Take Profit reached", body: `Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} — bot stopped.`, tag: "tp" } }).catch(() => {});
+        callNotify({
+          data: {
+            title: "Take Profit reached",
+            body: `Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} — bot stopped.`,
+            tag: "tp",
+          },
+        }).catch(() => {});
       } else if (e.type === "stop_loss") {
-        callNotify({ data: { title: "Stop Loss hit", body: `Net ${e.pnl.toFixed(2)} — bot stopped.`, tag: "sl" } }).catch(() => {});
+        callNotify({
+          data: {
+            title: "Stop Loss hit",
+            body: `Net ${e.pnl.toFixed(2)} — bot stopped.`,
+            tag: "sl",
+          },
+        }).catch(() => {});
       }
     });
-    return () => { off?.(); };
+    return () => {
+      off?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, onEvent]);
 
@@ -138,9 +163,15 @@ function Dashboard() {
     setPushBusy(true);
     try {
       const perm = await Notification.requestPermission();
-      if (perm !== "granted") { setPushBusy(false); return; }
+      if (perm !== "granted") {
+        setPushBusy(false);
+        return;
+      }
       const sub = await subscribePush(swReg);
-      if (!sub) { setPushBusy(false); return; }
+      if (!sub) {
+        setPushBusy(false);
+        return;
+      }
       const json = sub.toJSON();
       await callSave({
         data: {
@@ -234,7 +265,9 @@ function Dashboard() {
       setCfg((c) => ({ ...c, token: at === "real" ? rt : dt }));
       setTokenLoaded(true);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -259,9 +292,8 @@ function Dashboard() {
     if (!user) return;
     setSavingToken(true);
     setSavedMsg(null);
-    const patch = accountType === "real"
-      ? { deriv_token_real: realToken }
-      : { deriv_token_demo: demoToken };
+    const patch =
+      accountType === "real" ? { deriv_token_real: realToken } : { deriv_token_demo: demoToken };
     const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
     setSavingToken(false);
     if (error) setSavedMsg("Save failed");
@@ -284,10 +316,15 @@ function Dashboard() {
   const statusColor = !s?.connected
     ? "text-muted-foreground"
     : s?.running
-    ? "text-bull"
-    : "text-warn";
-  const statusLabel = !s?.connected ? "Disconnected" : s?.running ? "Running" : s?.authorized ? "Idle" : "Connecting…";
-
+      ? "text-bull"
+      : "text-warn";
+  const statusLabel = !s?.connected
+    ? "Disconnected"
+    : s?.running
+      ? "Running"
+      : s?.authorized
+        ? "Idle"
+        : "Connecting…";
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground pb-[calc(env(safe-area-inset-bottom,0px)+4rem)] lg:pb-0 px-safe">
@@ -298,18 +335,28 @@ function Dashboard() {
             <div className="h-2 w-2 rounded-sm bg-primary" />
           </div>
           <h1 className="font-display text-sm sm:text-base font-semibold tracking-tight truncate">
-            ThDpstSmrtTrdr<span className="hidden sm:inline text-muted-foreground"> · Digits Differ</span>
+            ThDpstSmrtTrdr
+            <span className="hidden sm:inline text-muted-foreground"> · Digits Differ</span>
           </h1>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 text-xs shrink-0">
           <div className="flex items-center gap-1.5">
-            <span className={`status-dot inline-block h-2 w-2 rounded-full ${statusColor}`} style={{ backgroundColor: "currentColor" }} />
+            <span
+              className={`status-dot inline-block h-2 w-2 rounded-full ${statusColor}`}
+              style={{ backgroundColor: "currentColor" }}
+            />
             <span className={`${statusColor} hidden xs:inline`}>{statusLabel}</span>
           </div>
           <div className="text-muted-foreground font-mono">
-            <span className="hidden sm:inline">{s?.currency} </span><span className="text-foreground">{s?.balance != null ? s.balance.toFixed(2) : "—"}</span>
+            <span className="hidden sm:inline">{s?.currency} </span>
+            <span className="text-foreground">
+              {s?.balance != null ? s.balance.toFixed(2) : "—"}
+            </span>
           </div>
-          <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">{user.email}</div>
+          <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">
+            {user.email}
+          </div>
+          <PwaInstallButton />
           {notificationsSupported() && (
             <button
               onClick={pushOn ? disablePush : enablePush}
@@ -338,7 +385,9 @@ function Dashboard() {
 
       <main className="grid gap-px bg-border grid-cols-1 lg:[grid-template-columns:minmax(280px,320px)_1fr_minmax(260px,300px)]">
         {/* LEFT: Controls */}
-        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "controls" ? "" : "hidden"} lg:block`}>
+        <section
+          className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "controls" ? "" : "hidden"} lg:block`}
+        >
           <SectionLabel>Connection</SectionLabel>
 
           {/* Account type toggle */}
@@ -372,7 +421,9 @@ function Dashboard() {
             )}
             {confirmReal && accountType === "demo" && (
               <div className="space-y-1.5 rounded-md border border-warn/40 bg-warn/10 px-2.5 py-2 text-[11px] text-warn">
-                <div>Switching to <b>Real</b> will trade with real money. Confirm?</div>
+                <div>
+                  Switching to <b>Real</b> will trade with real money. Confirm?
+                </div>
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => switchAccount("real")}
@@ -422,16 +473,16 @@ function Dashboard() {
               {s?.authorized ? "Connected" : s?.connected ? "Authorizing…" : "Connect"}
             </button>
           </div>
-          {savedMsg && (
-            <div className="text-[11px] text-muted-foreground">{savedMsg}</div>
-          )}
+          {savedMsg && <div className="text-[11px] text-muted-foreground">{savedMsg}</div>}
 
           <Divider />
           <SectionLabel>Strategy</SectionLabel>
           <label className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2">
             <span className="text-[11px] text-muted-foreground">
               Any digit mode
-              <span className="block text-[10px] text-muted-foreground/70">Trigger on whichever digit repeats</span>
+              <span className="block text-[10px] text-muted-foreground/70">
+                Trigger on whichever digit repeats
+              </span>
             </span>
             <input
               type="checkbox"
@@ -449,40 +500,71 @@ function Dashboard() {
                 onChange={(e) => setCfg({ ...cfg, targetDigit: Number(e.target.value) })}
               >
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <option key={i} value={i}>{i}</option>
+                  <option key={i} value={i}>
+                    {i}
+                  </option>
                 ))}
               </select>
             </Field>
             <Field label="Repetitions">
-              <NumInput value={cfg.repetitionCount} min={1} step={1} onChange={(v) => setCfg({ ...cfg, repetitionCount: Math.max(1, v) })} />
+              <NumInput
+                value={cfg.repetitionCount}
+                min={1}
+                step={1}
+                onChange={(v) => setCfg({ ...cfg, repetitionCount: Math.max(1, v) })}
+              />
             </Field>
             <Field label="Stake (USD)">
-              <NumInput value={cfg.stake} min={0.35} step={0.5} onChange={(v) => setCfg({ ...cfg, stake: v })} />
+              <NumInput
+                value={cfg.stake}
+                min={0.35}
+                step={0.5}
+                onChange={(v) => setCfg({ ...cfg, stake: v })}
+              />
             </Field>
             <Field label="App ID">
-              <input className="input" value={cfg.appId} onChange={(e) => setCfg({ ...cfg, appId: e.target.value })} />
+              <input
+                className="input"
+                value={cfg.appId}
+                onChange={(e) => setCfg({ ...cfg, appId: e.target.value })}
+              />
             </Field>
           </div>
-
 
           <Divider />
           <SectionLabel>Risk</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Stop Loss ($)">
-              <NumInput value={cfg.stopLoss} min={0} step={1} onChange={(v) => setCfg({ ...cfg, stopLoss: v })} />
+              <NumInput
+                value={cfg.stopLoss}
+                min={0}
+                step={1}
+                onChange={(v) => setCfg({ ...cfg, stopLoss: v })}
+              />
             </Field>
             <Field label="Take Profit ($)">
-              <NumInput value={cfg.takeProfit} min={0} step={1} onChange={(v) => setCfg({ ...cfg, takeProfit: v })} />
+              <NumInput
+                value={cfg.takeProfit}
+                min={0}
+                step={1}
+                onChange={(v) => setCfg({ ...cfg, takeProfit: v })}
+              />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2">
             {!s?.running ? (
-              <button className="btn-primary col-span-1" onClick={start} disabled={!s?.authorized}>Start Bot</button>
+              <button className="btn-primary col-span-1" onClick={start} disabled={!s?.authorized}>
+                Start Bot
+              </button>
             ) : (
-              <button className="btn-danger col-span-1" onClick={stop}>Stop Bot</button>
+              <button className="btn-danger col-span-1" onClick={stop}>
+                Stop Bot
+              </button>
             )}
-            <button className="btn-ghost" onClick={reset}>Reset</button>
+            <button className="btn-ghost" onClick={reset}>
+              Reset
+            </button>
           </div>
           <button
             className="btn-secondary w-full inline-flex items-center justify-center gap-1.5"
@@ -501,9 +583,14 @@ function Dashboard() {
         </section>
 
         {/* CENTER: Live tick + digit */}
-        <section className={`bg-background p-4 sm:p-6 space-y-6 ${mobileTab === "live" ? "" : "hidden"} lg:block`}>
+        <section
+          className={`bg-background p-4 sm:p-6 space-y-6 ${mobileTab === "live" ? "" : "hidden"} lg:block`}
+        >
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-            <Panel title="Last Digit" hint={`${cfg.symbol === "R_100" ? "Volatility 100 Index" : cfg.symbol}`}>
+            <Panel
+              title="Last Digit"
+              hint={`${cfg.symbol === "R_100" ? "Volatility 100 Index" : cfg.symbol}`}
+            >
               <div className="flex items-end justify-between gap-6">
                 <div
                   key={s?.lastDigit ?? "—"}
@@ -514,7 +601,9 @@ function Dashboard() {
                   {s?.lastDigit ?? "—"}
                 </div>
                 <div className="text-right space-y-1">
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Price</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Price
+                  </div>
                   <div className="font-mono text-xl">{s?.lastPrice?.toFixed(2) ?? "—"}</div>
                   <div className="mt-3 text-xs uppercase tracking-wider text-muted-foreground">
                     {cfg.anyDigit ? `Reps (digit ${s?.streakDigit ?? "—"})` : "Streak"}
@@ -523,7 +612,6 @@ function Dashboard() {
                     <span className={s && s.streak > 0 ? "text-warn" : ""}>{s?.streak ?? 0}</span>
                     <span className="text-muted-foreground"> / {cfg.repetitionCount}</span>
                   </div>
-
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-1.5">
@@ -531,7 +619,9 @@ function Dashboard() {
                   <span
                     key={i}
                     className={`font-mono text-xs h-7 w-7 grid place-items-center rounded ${
-                      d === cfg.targetDigit ? "bg-primary/15 text-primary" : "bg-surface text-muted-foreground"
+                      d === cfg.targetDigit
+                        ? "bg-primary/15 text-primary"
+                        : "bg-surface text-muted-foreground"
                     }`}
                   >
                     {d}
@@ -553,7 +643,9 @@ function Dashboard() {
                           {new Date(t.time).toLocaleTimeString([], { hour12: false })}
                         </span>
                         <span>{t.price.toFixed(2)}</span>
-                        <span className={t.digit === cfg.targetDigit ? "text-primary" : ""}>·{t.digit}</span>
+                        <span className={t.digit === cfg.targetDigit ? "text-primary" : ""}>
+                          ·{t.digit}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -564,7 +656,10 @@ function Dashboard() {
             </Panel>
           </div>
 
-          <Panel title="Trade Log" hint={`${s?.trades.length ?? 0} trade${(s?.trades.length ?? 0) === 1 ? "" : "s"}`}>
+          <Panel
+            title="Trade Log"
+            hint={`${s?.trades.length ?? 0} trade${(s?.trades.length ?? 0) === 1 ? "" : "s"}`}
+          >
             {s?.trades.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -580,7 +675,9 @@ function Dashboard() {
                   <tbody className="font-mono">
                     {s.trades.map((t) => (
                       <tr key={t.id} className="border-t border-border">
-                        <td className="py-2 pr-4 text-muted-foreground">{new Date(t.time).toLocaleTimeString([], { hour12: false })}</td>
+                        <td className="py-2 pr-4 text-muted-foreground">
+                          {new Date(t.time).toLocaleTimeString([], { hour12: false })}
+                        </td>
                         <td className="py-2 pr-4">{t.digit}</td>
                         <td className="py-2 pr-4">{t.buyPrice.toFixed(2)}</td>
                         <td className="py-2 pr-4">
@@ -592,8 +689,12 @@ function Dashboard() {
                             <span className="text-bear">loss</span>
                           )}
                         </td>
-                        <td className={`py-2 pr-0 text-right ${t.profit == null ? "" : t.profit >= 0 ? "text-bull" : "text-bear"}`}>
-                          {t.profit == null ? "—" : `${t.profit >= 0 ? "+" : ""}${t.profit.toFixed(2)}`}
+                        <td
+                          className={`py-2 pr-0 text-right ${t.profit == null ? "" : t.profit >= 0 ? "text-bull" : "text-bear"}`}
+                        >
+                          {t.profit == null
+                            ? "—"
+                            : `${t.profit >= 0 ? "+" : ""}${t.profit.toFixed(2)}`}
                         </td>
                       </tr>
                     ))}
@@ -609,12 +710,17 @@ function Dashboard() {
         </section>
 
         {/* RIGHT: Stats */}
-        <section className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "stats" ? "" : "hidden"} lg:block`}>
+        <section
+          className={`bg-background p-4 sm:p-5 space-y-5 ${mobileTab === "stats" ? "" : "hidden"} lg:block`}
+        >
           <SectionLabel>Session</SectionLabel>
           <div className="space-y-1">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Net P/L</div>
-            <div className={`font-mono text-4xl tracking-tight ${pnlAnim >= 0 ? "text-bull" : "text-bear"}`}>
-              {pnlAnim >= 0 ? "+" : ""}{pnlAnim.toFixed(2)}
+            <div
+              className={`font-mono text-4xl tracking-tight ${pnlAnim >= 0 ? "text-bull" : "text-bear"}`}
+            >
+              {pnlAnim >= 0 ? "+" : ""}
+              {pnlAnim.toFixed(2)}
               <span className="text-base text-muted-foreground"> {s?.currency}</span>
             </div>
           </div>
@@ -635,13 +741,16 @@ function Dashboard() {
           <Row k="Pending" v={s?.pendingTrade ? "yes" : "no"} />
           <Row k="Mode" v={cfg.anyDigit ? "Any digit" : `Digit ${cfg.targetDigit}`} />
           <Row k="Repetitions required" v={String(cfg.repetitionCount)} />
-          <Row k={cfg.anyDigit ? `Reps waited (digit ${s?.streakDigit ?? "—"})` : "Streak"} v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`} />
+          <Row
+            k={cfg.anyDigit ? `Reps waited (digit ${s?.streakDigit ?? "—"})` : "Streak"}
+            v={`${s?.streak ?? 0} / ${cfg.repetitionCount}`}
+          />
           <Row k="Symbol" v="R_100" />
           <Row k="Duration" v="1 tick" />
 
-
           <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
-            Tokens stay in your browser only — never sent to any third-party server. Demo and Real tokens are stored separately on your account.
+            Tokens stay in your browser only — never sent to any third-party server. Demo and Real
+            tokens are stored separately on your account.
           </p>
         </section>
       </main>
@@ -676,15 +785,18 @@ function Dashboard() {
         .btn-ghost:hover { color: var(--foreground); }
       `}</style>
       <Footer />
+      <PwaInstallBanner aboveNav />
 
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-safe">
         <div className="grid grid-cols-3">
-          {([
-            { id: "controls", label: "Controls", icon: Settings2 },
-            { id: "live", label: "Live", icon: Activity },
-            { id: "stats", label: "Stats", icon: BarChart3 },
-          ] as const).map(({ id, label, icon: Icon }) => {
+          {(
+            [
+              { id: "controls", label: "Controls", icon: Settings2 },
+              { id: "live", label: "Live", icon: Activity },
+              { id: "stats", label: "Stats", icon: BarChart3 },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => {
             const active = mobileTab === id;
             return (
               <button
@@ -709,7 +821,11 @@ function Dashboard() {
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{children}</div>;
+  return (
+    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      {children}
+    </div>
+  );
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -719,7 +835,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-function NumInput({ value, onChange, min, step }: { value: number; onChange: (v: number) => void; min?: number; step?: number }) {
+function NumInput({
+  value,
+  onChange,
+  min,
+  step,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  step?: number;
+}) {
   const [draft, setDraft] = useState<string | null>(null);
   const display = draft !== null ? draft : String(value);
   return (
@@ -743,8 +869,18 @@ function NumInput({ value, onChange, min, step }: { value: number; onChange: (v:
     />
   );
 }
-function Divider() { return <div className="h-px bg-border" />; }
-function Panel({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function Divider() {
+  return <div className="h-px bg-border" />;
+}
+function Panel({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-lg border border-border bg-surface/40 p-5">
       <div className="mb-4 flex items-baseline justify-between">
@@ -755,8 +891,17 @@ function Panel({ title, hint, children }: { title: string; hint?: string; childr
     </div>
   );
 }
-function Stat({ label, value, accent }: { label: string; value: number | string; accent?: "bull" | "bear" }) {
-  const color = accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
+function Stat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number | string;
+  accent?: "bull" | "bear";
+}) {
+  const color =
+    accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
   return (
     <div className="rounded-md bg-surface px-3 py-2.5">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -773,5 +918,7 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 function EmptyState({ children }: { children: React.ReactNode }) {
-  return <div className="grid place-items-center py-8 text-xs text-muted-foreground">{children}</div>;
+  return (
+    <div className="grid place-items-center py-8 text-xs text-muted-foreground">{children}</div>
+  );
 }
