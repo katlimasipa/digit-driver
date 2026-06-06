@@ -43,7 +43,13 @@ export type BotState = {
   pendingTrade: boolean;
 };
 
+export type BotEvent =
+  | { type: "trade_settled"; trade: Trade; pnl: number }
+  | { type: "stop_loss"; pnl: number }
+  | { type: "take_profit"; pnl: number };
+
 type Listener = (s: BotState) => void;
+type EventListener = (e: BotEvent) => void;
 
 const SYMBOL = "R_100";
 
@@ -51,6 +57,7 @@ export class DerivBot {
   private ws: WebSocket | null = null;
   private cfg: BotConfig;
   private listeners: Set<Listener> = new Set();
+  private eventListeners: Set<EventListener> = new Set();
   private state: BotState = {
     connected: false,
     running: false,
