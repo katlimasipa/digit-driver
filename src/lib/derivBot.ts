@@ -99,6 +99,8 @@ export class DerivBot {
 
   private fire(e: BotEvent) {
     this.eventListeners.forEach((l) => { try { l(e); } catch {} });
+  }
+
 
   private emit() {
     const snap = { ...this.state, ticks: this.state.ticks.slice(), trades: this.state.trades.slice() };
