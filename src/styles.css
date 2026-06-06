@@ -40,7 +40,8 @@
   --color-grid: var(--grid);
 }
 
-:root, .dark {
+:root,
+.dark {
   --radius: 0.5rem;
   /* Tinted dark — neutrals pulled toward cool teal */
   --background: oklch(0.18 0.012 220);
@@ -71,39 +72,79 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body { background-color: var(--color-background); color: var(--color-foreground); }
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
   body {
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
   }
-  .font-mono { font-feature-settings: "zero", "ss01"; }
+  .font-mono {
+    font-feature-settings: "zero", "ss01";
+  }
 }
 
 @layer utilities {
-  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
-  .pt-safe { padding-top: max(env(safe-area-inset-top), 0px); }
-  .px-safe { padding-left: max(env(safe-area-inset-left), 0px); padding-right: max(env(safe-area-inset-right), 0px); }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+  .px-safe {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
 }
 
 @layer utilities {
-  .digit-glow { text-shadow: 0 0 32px color-mix(in oklch, var(--primary) 60%, transparent); }
+  .digit-glow {
+    text-shadow: 0 0 32px color-mix(in oklch, var(--primary) 60%, transparent);
+  }
   .scanline {
-    background-image: linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--primary) 8%, transparent) 50%, transparent 100%);
+    background-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in oklch, var(--primary) 8%, transparent) 50%,
+      transparent 100%
+    );
   }
-  .tick-pulse { animation: tickPulse 0.4s ease-out; }
+  .tick-pulse {
+    animation: tickPulse 0.4s ease-out;
+  }
   @keyframes tickPulse {
-    0% { opacity: 0; transform: translateY(-2px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   .status-dot {
     box-shadow: 0 0 0 0 currentColor;
     animation: statusPulse 2s ease-out infinite;
   }
   @keyframes statusPulse {
-    0% { box-shadow: 0 0 0 0 color-mix(in oklch, currentColor 60%, transparent); }
-    100% { box-shadow: 0 0 0 8px transparent; }
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklch, currentColor 60%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 8px transparent;
+    }
   }
 }

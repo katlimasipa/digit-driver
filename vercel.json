@@ -1,4 +1,9 @@
 {
+  "build": {
+    "env": {
+      "NITRO_PRESET": "vercel"
+    }
+  },
   "headers": [
     {
       "source": "/manifest.webmanifest",
@@ -15,8 +20,5 @@
         { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

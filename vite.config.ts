@@ -1,23 +1,8 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
-import tsconfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "@tailwindcss/vite";
+import { nitro } from "nitro/vite";
 
 export default defineConfig({
-  plugins: [
-    TanStackRouterVite(),
-    react(),
-    tailwindcss(),
-    tsconfigPaths(),
-  ],
-  resolve: {
-    alias: {
-      "@": "/src",
-    },
-  },
-  server: {
-    port: 8080,
-    host: true,
-  },
+  cloudflare: false,
+  plugins: [TanStackRouterVite(), nitro()],
 });

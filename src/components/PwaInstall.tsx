@@ -100,8 +100,8 @@ export function PwaInstallButton({ className = "", showLabel = true }: PwaInstal
           <DialogHeader>
             <DialogTitle>Install SmrtTrdr</DialogTitle>
             <DialogDescription>
-              Add the app to your home screen for full-screen access, faster launch, and push
-              notifications.
+              Install to open SmrtTrdr full-screen without the Chrome browser bar. You also get
+              faster launch and push notifications.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-md border border-border bg-surface/40 p-3">
@@ -172,7 +172,7 @@ export function PwaInstallBanner({ aboveNav = false }: PwaInstallBannerProps) {
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-foreground">Install SmrtTrdr</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-              Add to your home screen for the best Android experience.
+              Install to remove the Chrome bar and run SmrtTrdr like a native app.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
