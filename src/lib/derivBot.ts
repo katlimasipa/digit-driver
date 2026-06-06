@@ -43,7 +43,13 @@ export type BotState = {
   pendingTrade: boolean;
 };
 
+export type BotEvent =
+  | { type: "trade_settled"; trade: Trade; pnl: number }
+  | { type: "stop_loss"; pnl: number }
+  | { type: "take_profit"; pnl: number };
+
 type Listener = (s: BotState) => void;
+type EventListener = (e: BotEvent) => void;
 
 const SYMBOL = "R_100";
 
@@ -51,6 +57,7 @@ export class DerivBot {
   private ws: WebSocket | null = null;
   private cfg: BotConfig;
   private listeners: Set<Listener> = new Set();
+  private eventListeners: Set<EventListener> = new Set();
   private state: BotState = {
     connected: false,
     running: false,
@@ -84,6 +91,16 @@ export class DerivBot {
     fn(this.state);
     return () => this.listeners.delete(fn);
   }
+
+  onEvent(fn: EventListener) {
+    this.eventListeners.add(fn);
+    return () => this.eventListeners.delete(fn);
+  }
+
+  private fire(e: BotEvent) {
+    this.eventListeners.forEach((l) => { try { l(e); } catch {} });
+  }
+
 
   private emit() {
     const snap = { ...this.state, ticks: this.state.ticks.slice(), trades: this.state.trades.slice() };
@@ -289,13 +306,18 @@ export class DerivBot {
 
     this.patch({ trades, pnl, wins, losses, totalTrades, pendingTrade: false });
 
+    const settledTrade = trades.find((t) => t.id === String(c.contract_id))!;
+    this.fire({ type: "trade_settled", trade: settledTrade, pnl });
+
     // Risk management
     if (pnl <= -Math.abs(this.cfg.stopLoss)) {
       this.stop();
       this.patch({ error: `Stop Loss hit (${pnl.toFixed(2)})` });
+      this.fire({ type: "stop_loss", pnl });
     } else if (pnl >= Math.abs(this.cfg.takeProfit)) {
       this.stop();
       this.patch({ error: `Take Profit reached (${pnl.toFixed(2)})` });
+      this.fire({ type: "take_profit", pnl });
     }
   }
 
