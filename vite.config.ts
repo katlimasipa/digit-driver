@@ -1,8 +1,11 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
-import { nitro } from "nitro/vite";
+
+const isVercel = !!process.env.VERCEL || process.env.NITRO_PRESET === "vercel";
 
 export default defineConfig({
-  cloudflare: false,
-  plugins: [TanStackRouterVite(), nitro()],
+  // On Vercel, force-enable nitro with the vercel preset.
+  // Otherwise let the wrapper auto-detect (Cloudflare for Lovable deploys).
+  nitro: isVercel ? { preset: "vercel" } : undefined,
+  plugins: [TanStackRouterVite()],
 });
