@@ -19,10 +19,10 @@ import type { AuthInfo, DerivAccount, AuthState, AuthConfig } from '@deriv/core'
 
 function getAuthConfig(): AuthConfig {
   const config: AuthConfig = {
-    clientId: import.meta.env.VITE_DERIV_APP_ID ?? '',
+    clientId: import.meta.env.VITE_DERIV_APP_ID || '33AujkUR3j91ob3aEpKGt',
     redirectUri:
-      import.meta.env.VITE_DERIV_REDIRECT_URI ??
-      (typeof window !== 'undefined' ? window.location.origin : ''),
+      import.meta.env.VITE_DERIV_REDIRECT_URI ||
+      'https://thdpstdgtdffrs.vercel.app/',
   };
 
   const scopesEnv = import.meta.env.VITE_DERIV_OAUTH_SCOPES ?? '';
