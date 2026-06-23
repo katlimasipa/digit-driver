@@ -1,21 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { useDerivBot } from "@/hooks/useDerivBot";
-import { useAuth } from "@/hooks/useAuth";
+import { useDerivAuth } from "@/hooks/useDerivAuth";
 import { AuthScreen } from "@/components/AuthScreen";
 import { Footer } from "@/components/Footer";
-import { SessionHistory } from "@/components/SessionHistory";
-import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Save, Archive, Settings2, Activity, BarChart3, Bell, BellOff } from "lucide-react";
+import { LogOut, Settings2, Activity, BarChart3 } from "lucide-react";
 import { PwaInstallBanner, PwaInstallButton } from "@/components/PwaInstall";
-import {
-  registerServiceWorker,
-  subscribePush,
-  unsubscribePush,
-  notificationsSupported,
-} from "@/lib/pwa";
-import { saveSubscription, removeSubscription, sendNotification } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -63,8 +53,8 @@ function useAnimatedNumber(value: number, duration = 400) {
 }
 
 function Dashboard() {
-  const { user, loading, signOut } = useAuth();
-  const { state, cfg, setCfg, start, stop, reset, connect, disconnect, onEvent } = useDerivBot();
+  const { authState, accounts, activeAccount, wsUrl, logout, switchAccount } = useDerivAuth();
+  const { state, cfg, setCfg, start, stop, reset, connect, disconnect } = useDerivBot();
   const s = state ?? {
     connected: false,
     running: false,
@@ -85,233 +75,29 @@ function Dashboard() {
     pendingTrade: false,
   };
   const pnlAnim = useAnimatedNumber(s?.pnl ?? 0);
-  const [accountType, setAccountType] = useState<"demo" | "real">("demo");
-  const [demoToken, setDemoToken] = useState("");
-  const [realToken, setRealToken] = useState("");
-  const [savingToken, setSavingToken] = useState(false);
-  const [tokenLoaded, setTokenLoaded] = useState(false);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
-  const [confirmReal, setConfirmReal] = useState(false);
-  const [sessionStart, setSessionStart] = useState<number>(() => Date.now());
-  const [historyKey, setHistoryKey] = useState(0);
-  const [savingSession, setSavingSession] = useState(false);
   const [mobileTab, setMobileTab] = useState<"controls" | "live" | "stats">("live");
-  const [swReg, setSwReg] = useState<ServiceWorkerRegistration | null>(null);
-  const [pushOn, setPushOn] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
-  const callSave = useServerFn(saveSubscription);
-  const callRemove = useServerFn(removeSubscription);
-  const callNotify = useServerFn(sendNotification);
 
-  // Register service worker on mount
+  // Keep bot configured with the active wsUrl
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const reg = await registerServiceWorker();
-      if (!mounted) return;
-      setSwReg(reg);
-      if (reg && "PushManager" in window) {
-        const sub = await reg.pushManager.getSubscription();
-        setPushOn(!!sub && Notification.permission === "granted");
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Wire bot events to push notifications (sent server-side so all the user's devices receive them)
-  useEffect(() => {
-    if (!user) return;
-    const off = onEvent?.((e) => {
-      if (e.type === "trade_settled") {
-        const won = e.trade.status === "won";
-        const profit = e.trade.profit ?? 0;
-        callNotify({
-          data: {
-            title: won ? "Trade WON" : "Trade LOST",
-            body: `${won ? "+" : ""}${profit.toFixed(2)} ${s?.currency || "USD"} · Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} (digit ≠ ${e.trade.digit})`,
-            tag: "trade",
-          },
-        }).catch(() => {});
-      } else if (e.type === "take_profit") {
-        callNotify({
-          data: {
-            title: "Take Profit reached",
-            body: `Net ${e.pnl >= 0 ? "+" : ""}${e.pnl.toFixed(2)} — bot stopped.`,
-            tag: "tp",
-          },
-        }).catch(() => {});
-      } else if (e.type === "stop_loss") {
-        callNotify({
-          data: {
-            title: "Stop Loss hit",
-            body: `Net ${e.pnl.toFixed(2)} — bot stopped.`,
-            tag: "sl",
-          },
-        }).catch(() => {});
-      }
-    });
-    return () => {
-      off?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, onEvent]);
-
-  async function enablePush() {
-    if (!swReg || !user) return;
-    setPushBusy(true);
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        setPushBusy(false);
-        return;
-      }
-      const sub = await subscribePush(swReg);
-      if (!sub) {
-        setPushBusy(false);
-        return;
-      }
-      const json = sub.toJSON();
-      await callSave({
-        data: {
-          endpoint: sub.endpoint,
-          p256dh: json.keys?.p256dh || "",
-          auth: json.keys?.auth || "",
-          userAgent: navigator.userAgent.slice(0, 500),
-        },
-      });
-      setPushOn(true);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setPushBusy(false);
-    }
-  }
-
-  async function disablePush() {
-    if (!swReg) return;
-    setPushBusy(true);
-    try {
-      const sub = await swReg.pushManager.getSubscription();
-      if (sub) {
-        await callRemove({ data: { endpoint: sub.endpoint } }).catch(() => {});
-        await unsubscribePush(swReg);
-      }
-      setPushOn(false);
-    } finally {
-      setPushBusy(false);
-    }
-  }
-
-  async function endAndSaveSession() {
-    if (!user) return;
-    if (!s || s.totalTrades === 0) {
-      // Just reset if nothing to save
-      stop();
-      reset();
-      setSessionStart(Date.now());
-      return;
-    }
-    setSavingSession(true);
-    stop();
-    const { error } = await supabase.from("trading_sessions").insert({
-      user_id: user.id,
-      account_type: accountType,
-      pnl: Number(s.pnl.toFixed(4)),
-      wins: s.wins,
-      losses: s.losses,
-      total_trades: s.totalTrades,
-      stake: cfg.stake,
-      target_digit: cfg.targetDigit,
-      repetition_count: cfg.repetitionCount,
-      started_at: new Date(sessionStart).toISOString(),
-      ended_at: new Date().toISOString(),
-    });
-    setSavingSession(false);
-    if (!error) {
-      reset();
-      setSessionStart(Date.now());
-      setHistoryKey((k) => k + 1);
-    }
-  }
-
-  const activeToken = accountType === "real" ? realToken : demoToken;
+    setCfg((c) => ({ ...c, wsUrl }));
+    // If wsUrl changed, disconnect the old socket so the user can connect again
+    disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsUrl]);
 
   const digits = useMemo(() => s?.ticks.slice(0, 30).map((t) => t.digit) ?? [], [s?.ticks]);
 
-  // Load tokens + preferred account type from profile
-  useEffect(() => {
-    if (!user) {
-      setTokenLoaded(false);
-      setDemoToken("");
-      setRealToken("");
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("deriv_token_demo, deriv_token_real, account_type")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      const dt = data?.deriv_token_demo ?? "";
-      const rt = data?.deriv_token_real ?? "";
-      const at = (data?.account_type === "real" ? "real" : "demo") as "demo" | "real";
-      setDemoToken(dt);
-      setRealToken(rt);
-      setAccountType(at);
-      setCfg((c) => ({ ...c, token: at === "real" ? rt : dt }));
-      setTokenLoaded(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  // When user switches account type, swap active token & disconnect any active session
-  function switchAccount(next: "demo" | "real") {
-    if (next === accountType) return;
-    if (next === "real" && !confirmReal) {
-      setConfirmReal(true);
-      return;
-    }
-    setAccountType(next);
-    setConfirmReal(false);
-    disconnect();
-    const tok = next === "real" ? realToken : demoToken;
-    setCfg({ ...cfg, token: tok });
-    if (user) {
-      supabase.from("profiles").update({ account_type: next }).eq("id", user.id);
-    }
-  }
-
-  async function saveToken() {
-    if (!user) return;
-    setSavingToken(true);
-    setSavedMsg(null);
-    const patch =
-      accountType === "real" ? { deriv_token_real: realToken } : { deriv_token_demo: demoToken };
-    const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
-    setSavingToken(false);
-    if (error) setSavedMsg("Save failed");
-    else {
-      setCfg({ ...cfg, token: activeToken });
-      setSavedMsg(`${accountType === "real" ? "Real" : "Demo"} token saved`);
-      setTimeout(() => setSavedMsg(null), 2000);
-    }
-  }
-
-  if (loading) {
+  if (authState === 'authenticating') {
     return (
       <div className="grid min-h-screen place-items-center bg-background text-xs text-muted-foreground">
-        Loading…
+        Authenticating…
       </div>
     );
   }
-  if (!user) return <AuthScreen />;
+  
+  if (authState !== 'authenticated' || !activeAccount) {
+    return <AuthScreen />;
+  }
 
   const statusColor = !s?.connected
     ? "text-muted-foreground"
@@ -328,7 +114,6 @@ function Dashboard() {
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground pb-[calc(env(safe-area-inset-bottom,0px)+4rem)] lg:pb-0 px-safe">
-      {/* Top bar */}
       <header className="flex items-center justify-between border-b border-border px-3 sm:px-6 py-3 gap-2">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="h-6 w-6 shrink-0 rounded-sm bg-primary/20 grid place-items-center">
@@ -353,27 +138,26 @@ function Dashboard() {
               {s?.balance != null ? s.balance.toFixed(2) : "—"}
             </span>
           </div>
-          <div className="hidden md:block text-muted-foreground font-mono max-w-[160px] truncate">
-            {user.email}
-          </div>
+          
+          <select 
+            value={activeAccount.account_id}
+            onChange={(e) => switchAccount(e.target.value)}
+            className="hidden md:block bg-surface border border-border rounded px-2 py-1 outline-none text-xs"
+          >
+            {accounts.map(acc => (
+              <option key={acc.account_id} value={acc.account_id}>
+                {acc.account_id} ({acc.account_type === 'demo' ? 'Demo' : 'Real'})
+              </option>
+            ))}
+          </select>
+
           <PwaInstallButton />
-          {notificationsSupported() && (
-            <button
-              onClick={pushOn ? disablePush : enablePush}
-              disabled={pushBusy || !swReg}
-              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors ${
-                pushOn
-                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
-                  : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-              title={pushOn ? "Notifications on — tap to disable" : "Enable push notifications"}
-            >
-              {pushOn ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{pushOn ? "Notify" : "Notify off"}</span>
-            </button>
-          )}
+          
           <button
-            onClick={() => signOut()}
+            onClick={() => {
+              disconnect();
+              logout();
+            }}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             title="Log out"
           >
@@ -390,90 +174,25 @@ function Dashboard() {
         >
           <SectionLabel>Connection</SectionLabel>
 
-          {/* Account type toggle */}
           <div className="space-y-2">
-            <span className="text-[11px] text-muted-foreground">Account</span>
-            <div className="flex gap-1 rounded-md bg-surface-2 p-1 text-xs">
-              {(["demo", "real"] as const).map((m) => {
-                const active = accountType === m;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => switchAccount(m)}
-                    className={`flex-1 rounded px-3 py-1.5 font-medium transition-all ${
-                      active
-                        ? m === "real"
-                          ? "bg-bear text-white"
-                          : "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {m === "demo" ? "Demo" : "Real"}
-                  </button>
-                );
-              })}
+            <span className="text-[11px] text-muted-foreground">Active Account</span>
+            <div className={`rounded-md border border-border px-3 py-2 font-mono text-sm font-medium ${activeAccount.account_type === 'real' ? 'bg-bear/10 text-bear border-bear/20' : 'bg-surface'}`}>
+              {activeAccount.account_id}
             </div>
-            {accountType === "real" && !s?.authorized && (
-              <div className="rounded-md border border-bear/40 bg-bear/10 px-2.5 py-1.5 text-[11px] text-bear">
+            {activeAccount.account_type === 'real' && (
+              <div className="text-[11px] text-bear">
                 Live trading uses real funds. Trade at your own risk.
-              </div>
-            )}
-            {confirmReal && accountType === "demo" && (
-              <div className="space-y-1.5 rounded-md border border-warn/40 bg-warn/10 px-2.5 py-2 text-[11px] text-warn">
-                <div>
-                  Switching to <b>Real</b> will trade with real money. Confirm?
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => switchAccount("real")}
-                    className="rounded bg-bear px-2 py-1 text-[11px] text-white"
-                  >
-                    Confirm Real
-                  </button>
-                  <button
-                    onClick={() => setConfirmReal(false)}
-                    className="rounded border border-border px-2 py-1 text-[11px] text-muted-foreground"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             )}
           </div>
 
-          <Field label={`${accountType === "real" ? "Real" : "Demo"} API Token`}>
-            <input
-              type="password"
-              value={accountType === "real" ? realToken : demoToken}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (accountType === "real") setRealToken(v);
-                else setDemoToken(v);
-              }}
-              placeholder={tokenLoaded ? `Paste ${accountType} API token` : "Loading…"}
-              className="input"
-              autoComplete="off"
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              className="btn-secondary inline-flex items-center justify-center gap-1.5"
-              onClick={saveToken}
-              disabled={savingToken || !activeToken}
-            >
-              <Save className="h-3.5 w-3.5" />
-              {savingToken ? "Saving…" : "Save"}
-            </button>
-            <button
-              className="btn-secondary"
-              onClick={connect}
-              disabled={!activeToken || s?.connected}
-            >
-              {s?.authorized ? "Connected" : s?.connected ? "Authorizing…" : "Connect"}
-            </button>
-          </div>
-          {savedMsg && <div className="text-[11px] text-muted-foreground">{savedMsg}</div>}
+          <button
+            className="btn-secondary w-full"
+            onClick={connect}
+            disabled={!wsUrl || s?.connected}
+          >
+            {s?.authorized ? "Connected" : s?.connected ? "Authorizing…" : "Connect Bot"}
+          </button>
 
           <Divider />
           <SectionLabel>Strategy</SectionLabel>
@@ -522,13 +241,6 @@ function Dashboard() {
                 onChange={(v) => setCfg({ ...cfg, stake: v })}
               />
             </Field>
-            <Field label="App ID">
-              <input
-                className="input"
-                value={cfg.appId}
-                onChange={(e) => setCfg({ ...cfg, appId: e.target.value })}
-              />
-            </Field>
           </div>
 
           <Divider />
@@ -566,14 +278,6 @@ function Dashboard() {
               Reset
             </button>
           </div>
-          <button
-            className="btn-secondary w-full inline-flex items-center justify-center gap-1.5"
-            onClick={endAndSaveSession}
-            disabled={savingSession || !s || s.totalTrades === 0}
-          >
-            <Archive className="h-3.5 w-3.5" />
-            {savingSession ? "Saving…" : "End & Save Session"}
-          </button>
 
           {s?.error && (
             <div className="rounded-md border border-bear/40 bg-bear/10 px-3 py-2 text-xs text-bear">
@@ -705,8 +409,6 @@ function Dashboard() {
               <EmptyState>Trades will appear here once the bot fires.</EmptyState>
             )}
           </Panel>
-
-          <SessionHistory userId={user.id} refreshKey={historyKey} />
         </section>
 
         {/* RIGHT: Stats */}
@@ -748,10 +450,6 @@ function Dashboard() {
           <Row k="Symbol" v="R_100" />
           <Row k="Duration" v="1 tick" />
 
-          <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
-            Tokens stay in your browser only — never sent to any third-party server. Demo and Real
-            tokens are stored separately on your account.
-          </p>
         </section>
       </main>
 
@@ -801,16 +499,13 @@ function Dashboard() {
             return (
               <button
                 key={id}
-                onClick={() => {
-                  setMobileTab(id);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                onClick={() => setMobileTab(id)}
+                className={`flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition-colors ${
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Icon className={`h-4 w-4 ${active ? "" : "opacity-70"}`} />
-                <span>{label}</span>
+                <Icon className={`h-5 w-5 ${active ? "opacity-100" : "opacity-70"}`} />
+                {label}
               </button>
             );
           })}
@@ -821,104 +516,67 @@ function Dashboard() {
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-      {children}
-    </div>
-  );
+  return <h2 className="text-[11px] font-semibold uppercase tracking-wider text-foreground mb-3">{children}</h2>;
+}
+function Divider() {
+  return <hr className="border-border my-6" />;
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-muted-foreground block">{label}</span>
       {children}
     </label>
   );
 }
-function NumInput({
-  value,
-  onChange,
-  min,
-  step,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  min?: number;
-  step?: number;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const display = draft !== null ? draft : String(value);
+function NumInput({ value, min, step, onChange }: { value: number; min: number; step: number; onChange: (v: number) => void }) {
   return (
     <input
       type="number"
-      className="input"
-      value={display}
+      value={value || ""}
       min={min}
       step={step}
-      onFocus={() => setDraft("")}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        if (draft === "" || draft === null) {
-          setDraft(null);
-          return;
-        }
-        const n = Number(draft);
-        if (!isNaN(n)) onChange(n);
-        setDraft(null);
-      }}
+      onChange={(e) => onChange(parseFloat(e.target.value) || min)}
+      className="input"
     />
   );
 }
-function Divider() {
-  return <div className="h-px bg-border" />;
-}
-function Panel({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Stat({ label, value, accent }: { label: string; value: string | number; accent?: "bull" | "bear" }) {
   return (
-    <div className="rounded-lg border border-border bg-surface/40 p-5">
+    <div className="rounded-md border border-border bg-surface-2 p-3">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+        {label}
+      </div>
+      <div className={`font-mono text-xl ${accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : ""}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+function Panel({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface/50 p-5 shadow-sm">
       <div className="mb-4 flex items-baseline justify-between">
-        <h3 className="font-display text-sm font-semibold tracking-tight">{title}</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider">{title}</h3>
         {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
       </div>
       {children}
     </div>
   );
 }
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number | string;
-  accent?: "bull" | "bear";
-}) {
-  const color =
-    accent === "bull" ? "text-bull" : accent === "bear" ? "text-bear" : "text-foreground";
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div className="rounded-md bg-surface px-3 py-2.5">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`font-mono text-lg ${color}`}>{value}</div>
-    </div>
-  );
-}
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-center justify-between text-xs">
+    <div className="flex items-center justify-between py-1.5 text-xs">
       <span className="text-muted-foreground">{k}</span>
-      <span className="font-mono">{v}</span>
+      <span className="font-mono font-medium">{v}</span>
     </div>
   );
 }
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid place-items-center py-8 text-xs text-muted-foreground">{children}</div>
+    <div className="flex h-full flex-col items-center justify-center space-y-3 rounded-lg border border-dashed border-border bg-surface/30 p-8 text-center">
+      <Activity className="h-6 w-6 text-muted-foreground/30" />
+      <span className="text-xs text-muted-foreground">{children}</span>
+    </div>
   );
 }

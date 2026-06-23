@@ -3,8 +3,8 @@ import { c as createMiddleware } from "./createMiddleware-BvN2ghIY.mjs";
 import { a as getRequest } from "./index.mjs";
 const requireSupabaseAuth = createMiddleware({ type: "function" }).server(
   async ({ next }) => {
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+    const SUPABASE_URL = typeof process !== "undefined" ? process.env.SUPABASE_URL : void 0;
+    const SUPABASE_PUBLISHABLE_KEY = typeof process !== "undefined" ? process.env.SUPABASE_PUBLISHABLE_KEY : void 0;
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [
         ...!SUPABASE_URL ? ["SUPABASE_URL"] : [],

@@ -2,8 +2,7 @@
 // Token lives only in this module's instance memory + sessionStorage; never sent to our server.
 
 export type BotConfig = {
-  token: string;
-  appId: string;
+  wsUrl: string | undefined; // The authenticated WebSocket URL with OTP
   symbol: string; // e.g. R_100
   stake: number;
   targetDigit: number; // 0-9
@@ -118,12 +117,18 @@ export class DerivBot {
 
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+    if (!this.cfg.wsUrl) {
+      this.patch({ error: "Missing WebSocket URL" });
+      return;
+    }
     this.patch({ error: null });
-    const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${this.cfg.appId}`);
+    const ws = new WebSocket(this.cfg.wsUrl);
     this.ws = ws;
     ws.onopen = () => {
-      this.patch({ connected: true });
-      this.send({ authorize: this.cfg.token });
+      this.patch({ connected: true, authorized: true });
+      // The socket is already authorized via the OTP URL, so we request balance/ticks right away
+      this.send({ balance: 1, subscribe: 1 }).catch(() => {});
+      this.send({ ticks: SYMBOL, subscribe: 1 }).catch(() => {});
     };
     ws.onmessage = (e) => this.onMessage(JSON.parse(e.data));
     ws.onclose = () => {
@@ -169,15 +174,9 @@ export class DerivBot {
       fn(msg);
     }
 
-    if (msg.msg_type === "authorize") {
-      if (msg.error) {
-        this.patch({ error: msg.error.message, authorized: false });
-        return;
-      }
-      this.patch({ authorized: true, balance: msg.authorize.balance, currency: msg.authorize.currency, error: null });
-      // subscribe to balance + ticks
-      this.send({ balance: 1, subscribe: 1 }).catch(() => {});
-      this.send({ ticks: SYMBOL, subscribe: 1 }).catch(() => {});
+    if (msg.error && !msg.req_id) {
+      this.patch({ error: msg.error.message });
+      if (msg.error.code === 'InvalidToken') this.patch({ authorized: false });
     }
 
     if (msg.msg_type === "balance" && msg.balance) {
@@ -190,10 +189,6 @@ export class DerivBot {
 
     if (msg.msg_type === "proposal_open_contract" && msg.proposal_open_contract) {
       this.handleContractUpdate(msg.proposal_open_contract);
-    }
-
-    if (msg.error && !msg.req_id) {
-      this.patch({ error: msg.error.message });
     }
   }
 

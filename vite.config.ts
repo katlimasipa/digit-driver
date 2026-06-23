@@ -4,5 +4,8 @@ import { nitro } from "nitro/vite";
 
 export default defineConfig({
   cloudflare: false,
+  tanstackStart: {
+    ssr: false
+  },
   plugins: [TanStackRouterVite(), nitro()],
 });

@@ -132,7 +132,7 @@ function RootComponent() {
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) });
 }
-const $$splitComponentImporter = () => import("./index-D6byBJ2N.mjs");
+const $$splitComponentImporter = () => import("./index-DHS1YiPo.mjs");
 const Route = createFileRoute("/")({
   head: () => ({
     meta: [{

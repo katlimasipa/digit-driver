@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { DerivBot, type BotConfig, type BotState } from "@/lib/derivBot";
 
 const DEFAULT_CFG: BotConfig = {
-  token: "",
-  appId: "1089",
+  wsUrl: undefined,
   symbol: "R_100",
   stake: 1,
   targetDigit: 5,

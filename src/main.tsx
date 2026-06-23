@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+// @ts-expect-error - StartClient is imported correctly but types might be missing
 import { StartClient } from '@tanstack/react-start'
 import { getRouter } from './router'
 import './styles.css'
